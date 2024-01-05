@@ -1,0 +1,91 @@
+import numpy as np
+import random
+import math
+import matplotlib.pyplot as plt
+
+
+def calculate_total_distance(order, distances):
+    # Calculate the total distance of a given order in the TSP
+    total_distance = 0
+    num_cities = len(order)
+    for i in range(num_cities - 1):
+        total_distance += distances[order[i]][order[i + 1]]
+    total_distance += distances[order[-1]][order[0]]  # Return to the starting city
+    return total_distance
+
+
+def generate_neighbor(current_order):
+    # Generate a neighboring solution by swapping two random cities in the order
+    neighbor_order = current_order.copy()
+    i, j = random.sample(range(len(current_order)), 2)
+    neighbor_order[i], neighbor_order[j] = neighbor_order[j], neighbor_order[i]
+    return neighbor_order
+
+
+def simulated_annealing_tsp(distances, initial_temperature, cooling_rate, num_iterations):
+    # Number of cities
+    num_cities = len(distances)
+
+    # Initialize the order randomly
+    current_order = list(range(num_cities))
+    random.shuffle(current_order)
+
+    # Calculate the total distance of the initial order
+    current_distance = calculate_total_distance(current_order, distances)
+
+    # Initialize the best order and distance
+    best_order = current_order.copy()
+    best_distance = current_distance
+
+    # Iterate through a number of annealing steps
+    for iteration in range(num_iterations):
+        # Calculate the current temperature
+        temperature = initial_temperature * math.exp(-cooling_rate * iteration)
+
+        # Generate a neighboring order
+        neighbor_order = generate_neighbor(current_order)
+
+        # Calculate the total distance of the neighboring order
+        neighbor_distance = calculate_total_distance(neighbor_order, distances)
+
+        # Accept the neighbor solution if it's better or with a probability based on the temperature
+        if neighbor_distance < current_distance or random.uniform(0, 1) < math.exp(
+                (current_distance - neighbor_distance) / temperature):
+            current_order = neighbor_order
+            current_distance = neighbor_distance
+
+            # Update the best solution if the current one is better
+            if current_distance < best_distance:
+                best_order = current_order
+                best_distance = current_distance
+
+    return best_order, best_distance
+
+
+# Example usage
+num_cities = 10
+random.seed(42)
+np.random.seed(42)
+
+# Generate random distances between cities
+distances = np.random.rand(num_cities, num_cities)
+np.fill_diagonal(distances, 0)  # Set diagonal elements to 0
+
+initial_temperature = 1000.0
+cooling_rate = 0.003
+iterations = 1000
+
+# Apply simulated annealing to solve the TSP
+final_order, final_distance = simulated_annealing_tsp(distances, initial_temperature, cooling_rate, iterations)
+
+# Print the final order and distance
+print("Final Order:", final_order)
+print("Final Distance:", final_distance)
+
+# Plot the path
+plt.figure(figsize=(8, 6))
+plt.scatter(np.arange(num_cities), np.arange(num_cities), c='red', marker='x', label='Cities')
+plt.plot(final_order + [final_order[0]], label=f'TSP Path\nTotal Distance: {final_distance:.2f}')
+plt.legend()
+plt.title('Travelling Salesman Problem Solution')
+plt.show()
